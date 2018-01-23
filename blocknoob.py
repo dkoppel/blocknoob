@@ -8,6 +8,7 @@ Noobpool Telegram bot - Please send donations to the EFF
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram import ForceReply
+from random import choice
 import logging
 import requests
 import datetime
@@ -35,7 +36,7 @@ def fetchLastblock():
     payload = { 'module': 'account', 'action': 'getminedblocks', 'address': address, 'blocktype': 'blocks', 'apikey': secrets.etherscan_token }
     last = requests.get('https://api.etherscan.io/api', params=payload).json()['result'][0]
     block, date = last['blockNumber'], datetime.datetime.fromtimestamp(int(last['timeStamp']))
-    return str("Most recent noobpool block #{} was found at {}.  Cheers Miners!").format(block, date.strftime('%Y-%m-%d %H:%M:%S'))
+    return str("Most recent noobpool block #{} was found at {}.  {}").format(block, date.strftime('%Y-%m-%d %H:%M:%S'), pleasantry())
 
 def lastblock(bot, update):
     """Send information about the last block mined."""
@@ -50,7 +51,7 @@ def fetchMinerstats(wallet):
     hashrate = result['currentHashrate']/1000000.0
     #roundshare = result['roundShares']
     #TODO: figure out roundShare calculation.
-    return str("Statistics for {}\r\n{} workers mining at {}MH/s.  Mine on!").format(wallet, workers, hashrate)
+    return str("Statistics for {}\r\n{} workers mining at {}MH/s. {}").format(wallet, workers, hashrate, pleasantry())
 	
 def stats(bot, update):
     """Prompt for ether wallet TODO inline or /stats@wallet"""
@@ -63,6 +64,10 @@ def getstats(bot, update):
     except Error as e:
         logger.error(e)
 
+def pleasantry():
+    pleasantries = ["Cheers!", "Happy Hashing!", "Mine On!", "Cheers Miners!", "Cheers Noobs!"]
+    return choice(pleasantries)
+    
 def main():
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
