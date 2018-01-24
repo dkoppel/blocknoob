@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # Callbacks for handlers.
 def start(bot, update):
     """Send a message when the command /start is issued."""
-    update.message.reply_text('Welcome!')
+    update.message.reply_text(pleasantry())
     
 def error(bot, update, error):
     """Log Errors caused by Updates."""
