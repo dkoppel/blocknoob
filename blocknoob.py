@@ -53,15 +53,21 @@ def fetchMinerstats(wallet):
     #TODO: figure out roundShare calculation.
     return str("Statistics for {}\r\n{} workers mining at {}MH/s. {}").format(wallet, workers, hashrate, pleasantry())
 	
-def stats(bot, update):
-    """Prompt for ether wallet TODO inline or /stats@wallet"""
-    update.message.reply_text("Which wallet would you like stats for?",reply_markup=ForceReply(force_reply=True))
+def stats(bot, update, args):
+    """Prompt for ether wallet if not supplied"""
+    if len(args) == 0:
+        update.message.reply_text("Which wallet would you like stats for?",reply_markup=ForceReply(force_reply=True))
+    else:
+        try:
+            update.message.reply_text(fetchMinerstats(args[0]))
+        except IndexError as e:
+            logger.error(e)
 
 def getstats(bot, update):
     """Check for reply, request noobpool statistics"""
     try:
         update.message.reply_text(fetchMinerstats(update.message.text))
-    except Error as e:
+    except Exception as e:
         logger.error(e)
 
 def pleasantry():
@@ -79,7 +85,7 @@ def main():
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("lastblock", lastblock))
-    dp.add_handler(CommandHandler("stats", stats))
+    dp.add_handler(CommandHandler("stats", stats, pass_args=True))
     dp.add_handler(MessageHandler(Filters.reply, getstats))
 
     # log all errors
