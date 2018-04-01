@@ -42,8 +42,11 @@ def checkBlock(bot, job):
                     'offset': '1',
                     'type': 'blocks',
                     'apikey': secrets.etherscan_token }
-        message = str("Noobpool hit a block!\r\n#{} was found at {} UTC.  {}").format(block, date.strftime('%Y-%m-%d %H:%M:%S'), pleasantry())
-        if checkLast(queryEtherscan(payload)):
+        #message = str("Noobpool hit a block!\r\n#{} was found at {} UTC.  {}").format(block, date.strftime('%Y-%m-%d %H:%M:%S'), pleasantry())
+        # we need to pass back block and time data from the query function -- oops
+        message = str("Noobpool hit a block!  {}").format(pleasantry())
+        request = queryEtherscan(payload)
+        if checkLast(request):
             announceBlock(message, job.context)
 
         payload = { 'module': 'account',
@@ -53,8 +56,10 @@ def checkBlock(bot, job):
                     'offset': '1',
                     'type': 'uncles',
                     'apikey': secrets.etherscan_token }
-        message = str("Noobpool hit an uncle!\r\n#{} was found at {} UTC.  {}").format(block, date.strftime('%Y-%m-%d %H:%M:%S'), pleasantry())
-        if checkLast(queryEtherscan(payload)):
+        #message = str("Noobpool hit an uncle!\r\n#{} was found at {} UTC.  {}").format(block, date.strftime('%Y-%m-%d %H:%M:%S'), pleasantry())
+        message = str("Noobpool hit an uncle!  {}").format(pleasantry())
+        request = queryEtherscan(payload)
+        if checkLast(request):
             announceBlock(message, job.context)
 
     except Exception as e:
@@ -67,7 +72,6 @@ def queryEtherscan(payload):
 
 def checkLast(last):
     """Check recent blocks for freshness, return true if <1m old""" 
-    last = queryEtherscan(payload)
     block, date = last['blockNumber'], datetime.datetime.fromtimestamp(int(last['timeStamp']))
     if (datetime.datetime.utcnow()-date <= datetime.timedelta(seconds=60)):
         return True
