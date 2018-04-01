@@ -32,17 +32,47 @@ def announceBlock(bot, update, message):
     update.message.reply_text(message)
 
 def checkBlock(bot, job):
-    """Check for a recent block"""
-    logger.info("checkBlock")
+    """Check for a recent blocks and uncles"""
+    #logger.info("checkBlock")
     try:
-        payload = { 'module': 'account', 'action': 'getminedblocks', 'address': address, 'page': '1', 'offset': '1', 'apikey': secrets.etherscan_token }
-        last = requests.get('https://api.etherscan.io/api', params=payload).json()['result'][0]
-        block, date = last['blockNumber'], datetime.datetime.fromtimestamp(int(last['timeStamp']))
+        payload = { 'module': 'account',
+                    'action': 'getminedblocks',
+                    'address': address,
+                    'page': '1',
+                    'offset': '1',
+                    'type': 'blocks',
+                    'apikey': secrets.etherscan_token }
         message = str("Noobpool hit a block!\r\n#{} was found at {} UTC.  {}").format(block, date.strftime('%Y-%m-%d %H:%M:%S'), pleasantry())
-        if (datetime.datetime.utcnow()-date <= datetime.timedelta(seconds=60)):
-            announceBlock(message, job.context, message)
+        if checkLast(queryEtherscan(payload)):
+            announceBlock(message, job.context)
+
+        payload = { 'module': 'account',
+                    'action': 'getminedblocks',
+                    'address': address,
+                    'page': '1',
+                    'offset': '1',
+                    'type': 'uncles',
+                    'apikey': secrets.etherscan_token }
+        message = str("Noobpool hit an uncle!\r\n#{} was found at {} UTC.  {}").format(block, date.strftime('%Y-%m-%d %H:%M:%S'), pleasantry())
+        if checkLast(queryEtherscan(payload)):
+            announceBlock(message, job.context)
+
     except Exception as e:
         logger.error(repr(e))
+
+
+def queryEtherscan(payload):
+    """Query the etherscan API"""
+    return requests.get('https://api.etherscan.io/api', params=payload).json()['result'][0]
+
+def checkLast(last):
+    """Check recent blocks for freshness, return true if <1m old""" 
+    last = queryEtherscan(payload)
+    block, date = last['blockNumber'], datetime.datetime.fromtimestamp(int(last['timeStamp']))
+    if (datetime.datetime.utcnow()-date <= datetime.timedelta(seconds=60)):
+        return True
+    else:
+        return False
 
 def scheduleJob(bot, update, args, job_queue):
     """Add a job to the job queue"""
