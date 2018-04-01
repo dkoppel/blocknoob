@@ -23,26 +23,36 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 # Callbacks for handlers.
-def start(bot, update):
-    """Send a message when the command /start is issued."""
-    update.message.reply_text(pleasantry())
-    
 def error(bot, update, error):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, error)
 
-def fetchLastblock():
-    """Fetch last ether block mined by noobpool."""
-    payload = { 'module': 'account', 'action': 'getminedblocks', 'address': address, 'blocktype': 'blocks', 'apikey': secrets.etherscan_token }
-    last = requests.get('https://api.etherscan.io/api', params=payload).json()['result'][0]
-    block, date = last['blockNumber'], datetime.datetime.fromtimestamp(int(last['timeStamp']))
-    return str("Most recent noobpool block #{} was found at {}.  {}").format(block, date.strftime('%Y-%m-%d %H:%M:%S'), pleasantry())
-
-def lastblock(bot, update):
-    """Send information about the last block mined."""
-    message = fetchLastblock()
+def announceBlock(bot, update, message):
+    """Called when a block is found to announce it."""
     update.message.reply_text(message)
 
+def checkBlock(bot, job):
+    """Check for a recent block"""
+    logger.info("checkBlock")
+    try:
+        payload = { 'module': 'account', 'action': 'getminedblocks', 'address': address, 'page': '1', 'offset': '1', 'apikey': secrets.etherscan_token }
+        last = requests.get('https://api.etherscan.io/api', params=payload).json()['result'][0]
+        block, date = last['blockNumber'], datetime.datetime.fromtimestamp(int(last['timeStamp']))
+        message = str("Noobpool hit a block!\r\n#{} was found at {} UTC.  {}").format(block, date.strftime('%Y-%m-%d %H:%M:%S'), pleasantry())
+        if (datetime.datetime.utcnow()-date <= datetime.timedelta(seconds=60)):
+            announceBlock(message, job.context, message)
+    except Exception as e:
+        logger.error(repr(e))
+
+def scheduleJob(bot, update, args, job_queue):
+    """Add a job to the job queue"""
+    #in seconds
+    interval = 60
+    if not job_queue.jobs(): # Only add a job if the queue is empty.
+        job = job_queue.run_repeating(checkBlock, interval, context=update)
+        logger.info("added job")
+
+    
 def fetchMinerstats(wallet):
     """Fetch Miner statistics with an API call to noobpool."""
     url = str("http://www.noobpool.com/api/accounts/{}").format(wallet)
@@ -61,17 +71,17 @@ def stats(bot, update, args):
         try:
             update.message.reply_text(fetchMinerstats(args[0]))
         except IndexError as e:
-            logger.error(e)
+            logger.error(repr(e))
 
 def getstats(bot, update):
     """Check for reply, request noobpool statistics"""
     try:
         update.message.reply_text(fetchMinerstats(update.message.text))
     except Exception as e:
-        logger.error(e)
+        logger.error(repr(e))
 
 def pleasantry():
-    pleasantries = ["Cheers!", "Happy Hashing!", "Mine On!", "Cheers Miners!", "Cheers Noobs!"]
+    pleasantries = ["Cheers!", "Happy Hashing!", "Mine On!", "Cheers Miners!", "Cheers Noobs!", "Keep Mining Noobs!", "Hoppers Begone!"]
     return choice(pleasantries)
     
 def main():
@@ -83,8 +93,7 @@ def main():
     dp = updater.dispatcher
 
     # on different commands - answer in Telegram
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("lastblock", lastblock))
+    dp.add_handler(CommandHandler("start", scheduleJob, pass_args=True, pass_job_queue=True))
     dp.add_handler(CommandHandler("stats", stats, pass_args=True))
     dp.add_handler(MessageHandler(Filters.reply, getstats))
 
