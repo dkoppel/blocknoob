@@ -47,7 +47,7 @@ def checkBlock(bot, job):
         message = str("Noobpool hit a block!  {}").format(pleasantry())
         request = queryEtherscan(payload)
         if checkLast(request):
-            announceBlock(message, job.context)
+            announceBlock(bot, job.context, message)
 
         payload = { 'module': 'account',
                     'action': 'getminedblocks',
@@ -60,7 +60,7 @@ def checkBlock(bot, job):
         message = str("Noobpool hit an uncle!  {}").format(pleasantry())
         request = queryEtherscan(payload)
         if checkLast(request):
-            announceBlock(message, job.context)
+            announceBlock(bot, job.context, message)
 
     except Exception as e:
         logger.error(repr(e))
